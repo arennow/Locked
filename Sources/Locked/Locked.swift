@@ -1,35 +1,35 @@
 import Foundation
 
-final class Locked<T>: @unchecked Sendable {
+public final class Locked<T>: @unchecked Sendable {
 	private let lock = NSLock()
 	private var inner: T
 
-	init(_ inner: consuming T) {
+	public init(_ inner: consuming T) {
 		self.inner = inner
 	}
 
-	func read<R>(in f: (borrowing T) throws -> R) rethrows -> R {
+	public func read<R>(in f: (borrowing T) throws -> R) rethrows -> R {
 		try self.lock.withLock {
 			try f(self.inner)
 		}
 	}
 
-	func mutate<R>(in f: (inout T) -> R) -> R {
+	public func mutate<R>(in f: (inout T) -> R) -> R {
 		self.lock.withLock {
 			f(&self.inner)
 		}
 	}
 
-	subscript<K, V>(key: K) -> V? where T == Dictionary<K, V> {
+	public subscript<K, V>(key: K) -> V? where T == Dictionary<K, V> {
 		get { self.read { $0[key] }}
 		set { self.mutate { $0[key] = newValue }}
 	}
 }
 
-extension Locked {
+public extension Locked {
 	struct AcquisitionHandle: ~Copyable {
 		private let parent: Locked
-		var resource: T {
+		public var resource: T {
 			_read {
 				yield self.parent.inner
 			}
@@ -42,7 +42,7 @@ extension Locked {
 			self.parent = parent
 		}
 
-		consuming func release() {}
+		public consuming func release() {}
 
 		deinit {
 			self.parent.lock.unlock()
