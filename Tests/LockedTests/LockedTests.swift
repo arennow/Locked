@@ -28,7 +28,7 @@ struct LockedTests {
 	}
 
 	@Test func dictionarySubscript() {
-		let locked = Locked<[String: Int]>([:])
+		let locked = LockedWithImplicitAccess<[String: Int]>([:])
 
 		// Set values
 		locked["a"] = 1
@@ -130,7 +130,7 @@ struct LockedTests {
 	}
 
 	@Test func concurrentDictionaryAccess() async {
-		let locked = Locked<[Int: Int]>([:])
+		let locked = LockedWithImplicitAccess<[Int: Int]>([:])
 
 		await withTaskGroup(of: Void.self) { group in
 			for i in 0..<100 {

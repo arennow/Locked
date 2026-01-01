@@ -1,6 +1,13 @@
 import Foundation
 
-public final class Locked<T>: @unchecked Sendable {
+/// A thread-safe wrapper for a value of type `T`.
+///
+/// Access the protected value using `read(_:)` or `mutate(_:)` closures, which automatically
+/// acquire and release the lock. Each closure invocation is atomic and the lock is held only
+/// for the duration of the closure.
+///
+/// For extended lock acquisition, use `acquireIntoHandle()` to get an RAII `AcquisitionHandle`.
+public class Locked<T>: @unchecked Sendable {
 	private let lock = NSLock()
 	private var inner: T
 
@@ -8,21 +15,16 @@ public final class Locked<T>: @unchecked Sendable {
 		self.inner = inner
 	}
 
-	public func read<R>(in f: (borrowing T) throws -> R) rethrows -> R {
+	public final func read<R>(in f: (borrowing T) throws -> R) rethrows -> R {
 		try self.lock.withLock {
 			try f(self.inner)
 		}
 	}
 
-	public func mutate<R>(in f: (inout T) throws -> R) rethrows -> R {
+	public final func mutate<R>(in f: (inout T) throws -> R) rethrows -> R {
 		try self.lock.withLock {
 			try f(&self.inner)
 		}
-	}
-
-	public subscript<K, V>(key: K) -> V? where T == Dictionary<K, V> {
-		get { self.read { $0[key] }}
-		set { self.mutate { $0[key] = newValue }}
 	}
 }
 
@@ -49,8 +51,17 @@ public extension Locked {
 		}
 	}
 
-	func acquireIntoHandle() -> AcquisitionHandle {
+	final func acquireIntoHandle() -> AcquisitionHandle {
 		self.lock.lock()
 		return AcquisitionHandle(parent: self)
+	}
+}
+
+/// Convenience subclass providing implicit access patterns that are easy to misuse.
+public class LockedWithImplicitAccess<T>: Locked<T>, @unchecked Sendable {
+	/// Dictionary subscript. Each access is independently atomic but multiple accesses are not atomic together.
+	public subscript<K, V>(key: K) -> V? where T == Dictionary<K, V> {
+		get { self.read { $0[key] }}
+		set { self.mutate { $0[key] = newValue }}
 	}
 }
