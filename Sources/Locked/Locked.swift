@@ -14,9 +14,9 @@ public final class Locked<T>: @unchecked Sendable {
 		}
 	}
 
-	public func mutate<R>(in f: (inout T) -> R) -> R {
-		self.lock.withLock {
-			f(&self.inner)
+	public func mutate<R>(in f: (inout T) throws -> R) rethrows -> R {
+		try self.lock.withLock {
+			try f(&self.inner)
 		}
 	}
 
